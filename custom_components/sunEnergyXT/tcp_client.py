@@ -63,7 +63,9 @@ class TcpClient:
             self.connected = False
             return False
 
-    async def async_set_data(self, data_type: str, data_value: int | float, set_data: str) -> bool:
+    async def async_set_data(
+        self, data_type: str, data_value: int | float, set_data: str
+    ) -> bool:
         del data_value
         if not self.connected or self.writer is None:
             return False
@@ -108,8 +110,6 @@ class TcpClient:
                     if parsed is not None:
                         messages.append(parsed)
             except TimeoutError:
-                continue
-            except asyncio.TimeoutError:
                 continue
             except Exception as err:
                 _LOGGER.error("read_messages_error: %s", err)

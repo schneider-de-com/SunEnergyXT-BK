@@ -1,11 +1,24 @@
+from __future__ import annotations
+
 import socket
-import voluptuous as vol
-from homeassistant.components.sensor.const import SensorDeviceClass
-from homeassistant.const import *
-from .global_config import *
 from typing import Any
-from .const import *
+
+import voluptuous as vol
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.const import (
+    PERCENTAGE,
+    SIGNAL_STRENGTH_DECIBELS,
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    UnitOfElectricCurrent,
+    UnitOfElectricPotential,
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfTemperature,
+    UnitOfTime,
+)
 from homeassistant.helpers import selector
+
+from .global_config import GLOBAL_DEVICES
 
 data_type_mapping = {
     0: "t592",
@@ -287,15 +300,9 @@ def get_entity_available(data_type, data_info, data_factor) -> bool:
 
 
 def get_entity_state_class(sensor_id) -> str | None:
-    """根据实体类型获取state_class."""
+    """Return default state class for legacy sensor ids."""
 
-    state_class = "measurement"
+    if sensor_id == "t586":
+        return None
 
-    data_type = ENTITY_SENSOR_TYPES[sensor_id]
-
-    if data_type == "t586":
-        state_class = None
-    else:
-        state_class = "measurement"
-
-    return state_class
+    return "measurement"

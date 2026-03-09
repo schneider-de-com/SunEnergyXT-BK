@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 from homeassistant import config_entries
+from homeassistant.core import callback
 
 from .const import DOMAIN
 from .discovery import MdnsManager
@@ -17,6 +18,7 @@ from .util import (
     get_manual_select_schema,
     validate_connection,
 )
+
 
 class BkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """处理集成配置流程."""

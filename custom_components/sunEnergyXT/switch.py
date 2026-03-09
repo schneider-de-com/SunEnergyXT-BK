@@ -41,7 +41,14 @@ class SunEnergyXTSwitch(CoordinatorEntity, SwitchEntity):
     _attr_has_entity_name = True
     _attr_should_poll = False
 
-    def __init__(self, coordinator: SunEnergyXTCoordinator, client, serial_number: str, device_info, description: SwitchDescription) -> None:
+    def __init__(
+        self,
+        coordinator: SunEnergyXTCoordinator,
+        client,
+        serial_number: str,
+        device_info,
+        description: SwitchDescription,
+    ) -> None:
         super().__init__(coordinator)
         self.client = client
         self.entity_description = description
@@ -73,6 +80,8 @@ class SunEnergyXTSwitch(CoordinatorEntity, SwitchEntity):
         data_info = DataInfo()
         setattr(data_info, self._point, value)
         request_info = RequestInfo(code=0x6056, data=data_info)
-        ok = await self.client.async_set_data(self._point, value, request_info.request_to_json_remove_FF())
+        ok = await self.client.async_set_data(
+            self._point, value, request_info.request_to_json_remove_FF()
+        )
         if ok:
             await self.coordinator.async_request_refresh()

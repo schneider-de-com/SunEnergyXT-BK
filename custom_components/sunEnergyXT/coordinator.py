@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from datetime import timedelta
-import logging
 from typing import Any
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -27,7 +27,9 @@ class SunEnergyXTCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._point_valid_hits: dict[str, int] = {}
         self._listeners: list[Callable[[], None]] = []
 
-    def register_new_point_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
+    def register_new_point_listener(
+        self, listener: Callable[[], None]
+    ) -> Callable[[], None]:
         self._listeners.append(listener)
 
         def _remove() -> None:

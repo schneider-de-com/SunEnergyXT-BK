@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, fields
-from typing import Any, Dict
+from typing import Any
 
 
 @dataclass
@@ -99,9 +99,11 @@ class DataInfo:
     S2_ER2: int = 0xFFFFFFFF
 
     @classmethod
-    def dict_to_data(cls, data_dict: Dict[str, Any]) -> "DataInfo":
+    def dict_to_data(cls, data_dict: dict[str, Any]) -> DataInfo:
         valid_fields = {field.name for field in fields(cls)}
-        filtered = {key: value for key, value in data_dict.items() if key in valid_fields}
+        filtered = {
+            key: value for key, value in data_dict.items() if key in valid_fields
+        }
         return cls(**filtered)
 
     def data_to_json(self) -> str:

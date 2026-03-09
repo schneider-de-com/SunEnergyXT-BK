@@ -38,7 +38,13 @@ class SunEnergyXTSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
     _attr_should_poll = False
 
-    def __init__(self, coordinator: SunEnergyXTCoordinator, serial_number: str, device_info, description: SensorDescription) -> None:
+    def __init__(
+        self,
+        coordinator: SunEnergyXTCoordinator,
+        serial_number: str,
+        device_info,
+        description: SensorDescription,
+    ) -> None:
         super().__init__(coordinator)
         self.entity_description = description
         self._point = description.key

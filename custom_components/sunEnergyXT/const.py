@@ -136,11 +136,25 @@ SENSOR_DESCRIPTIONS: dict[str, SensorDescription] = {
         suggested_display_precision=0,
         multiplier=-1,
     ),
-    "M_ER1": SensorDescription(key="M_ER1", name="Head Unit Error 1", entity_category=EntityCategory.DIAGNOSTIC),
-    "M_ER2": SensorDescription(key="M_ER2", name="Head Unit Error 2", entity_category=EntityCategory.DIAGNOSTIC),
-    "M_ER3": SensorDescription(key="M_ER3", name="Head Unit Error 3", entity_category=EntityCategory.DIAGNOSTIC),
-    "S2_ER1": SensorDescription(key="S2_ER1", name="Expansion Error 1", entity_category=EntityCategory.DIAGNOSTIC),
-    "S2_ER2": SensorDescription(key="S2_ER2", name="Expansion Error 2", entity_category=EntityCategory.DIAGNOSTIC),
+    "M_ER1": SensorDescription(
+        key="M_ER1", name="Head Unit Error 1", entity_category=EntityCategory.DIAGNOSTIC
+    ),
+    "M_ER2": SensorDescription(
+        key="M_ER2", name="Head Unit Error 2", entity_category=EntityCategory.DIAGNOSTIC
+    ),
+    "M_ER3": SensorDescription(
+        key="M_ER3", name="Head Unit Error 3", entity_category=EntityCategory.DIAGNOSTIC
+    ),
+    "S2_ER1": SensorDescription(
+        key="S2_ER1",
+        name="Expansion Error 1",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "S2_ER2": SensorDescription(
+        key="S2_ER2",
+        name="Expansion Error 2",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
 }
 
 NUMBER_DESCRIPTIONS: dict[str, NumberDescription] = {
@@ -162,10 +176,46 @@ SWITCH_DESCRIPTIONS: dict[str, SwitchDescription] = {
     "t728": SwitchDescription("t728", "AC Mix In EV Mode"),
 }
 
-SOC_POINTS = {0: "t592", 1: "t593", 2: "t594", 3: "t595", 4: "t1001", 5: "t1002", 6: "t1003", 7: "t1004"}
-LIMIT_MIN_POINTS = {0: "t507", 1: "t509", 2: "t511", 3: "t513", 4: "t948", 5: "t950", 6: "t952", 7: "t954"}
-LIMIT_MAX_POINTS = {0: "t508", 1: "t510", 2: "t512", 3: "t514", 4: "t949", 5: "t951", 6: "t953", 7: "t955"}
-CELLTEMP_POINTS = {0: "t220", 1: "t233", 2: "t246", 3: "t259", 4: "t836", 5: "t849", 6: "t862", 7: "t875"}
+SOC_POINTS = {
+    0: "t592",
+    1: "t593",
+    2: "t594",
+    3: "t595",
+    4: "t1001",
+    5: "t1002",
+    6: "t1003",
+    7: "t1004",
+}
+LIMIT_MIN_POINTS = {
+    0: "t507",
+    1: "t509",
+    2: "t511",
+    3: "t513",
+    4: "t948",
+    5: "t950",
+    6: "t952",
+    7: "t954",
+}
+LIMIT_MAX_POINTS = {
+    0: "t508",
+    1: "t510",
+    2: "t512",
+    3: "t514",
+    4: "t949",
+    5: "t951",
+    6: "t953",
+    7: "t955",
+}
+CELLTEMP_POINTS = {
+    0: "t220",
+    1: "t233",
+    2: "t246",
+    3: "t259",
+    4: "t836",
+    5: "t849",
+    6: "t862",
+    7: "t875",
+}
 PV_POWER_POINTS = {
     0: ("t50", "Head Unit PV1 Input Power"),
     1: ("t62", "Head Unit PV2 Input Power"),
