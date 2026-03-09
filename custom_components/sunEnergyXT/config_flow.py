@@ -1,12 +1,22 @@
-from typing import Any
-from homeassistant import config_entries
-from homeassistant.core import callback
-from .const import DOMAIN
-from .tcp_client import *
-from .discovery import *
-from .global_config import *
-from .util import *  # type: ignore
+from __future__ import annotations
 
+import asyncio
+from typing import Any
+
+from homeassistant import config_entries
+
+from .const import DOMAIN
+from .discovery import MdnsManager
+from .global_config import GLOBAL_DEVICES, GLOBAL_MDNS_CLIENTS
+from .util import (
+    get_config_schema,
+    get_device_info_form_serial_number,
+    get_discover_schema,
+    get_error_message,
+    get_manual_schema,
+    get_manual_select_schema,
+    validate_connection,
+)
 
 class BkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """处理集成配置流程."""
