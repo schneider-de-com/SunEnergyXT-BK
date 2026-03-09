@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from homeassistant.config_entries import ConfigEntryState
 
 from custom_components.sunEnergyXT.const import DOMAIN
+
+pytestmark = pytest.mark.asyncio
 
 
 async def test_setup_entry(hass, MockConfigEntry):
