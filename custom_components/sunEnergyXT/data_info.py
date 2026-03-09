@@ -132,3 +132,15 @@ class DiagnosticInfo:
     connection: str = ""
     reporttime: str = ""
     networkrssi: str = ""
+
+@dataclass
+class MdnsDeiveInfo:
+    """mDNS device discovery info."""
+
+    service_type: str
+    service_name: str
+    serial_number: str
+    host: str
+    port: int
+    sw_version: str
+    hw_version: str
