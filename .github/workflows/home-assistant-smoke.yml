@@ -1,0 +1,85 @@
+name: Home Assistant smoke test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ha_tag:
+          - stable
+          - beta
+
+    name: Smoke test (${{ matrix.ha_tag }})
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v5
+
+      - name: Prepare Home Assistant config
+        run: |
+          mkdir -p .ci/config/custom_components
+          cp -R custom_components/sunEnergyXT .ci/config/custom_components/
+
+          cat > .ci/config/configuration.yaml <<'EOF'
+          default_config:
+
+          logger:
+            default: info
+            logs:
+              custom_components.sunEnergyXT: debug
+          EOF
+
+      - name: Start Home Assistant container
+        run: |
+          docker run -d \
+            --name homeassistant-${{ matrix.ha_tag }} \
+            -p 8123:8123 \
+            -v "${{ github.workspace }}/.ci/config:/config" \
+            ghcr.io/home-assistant/home-assistant:${{ matrix.ha_tag }}
+
+      - name: Wait for Home Assistant startup
+        run: |
+          for i in $(seq 1 120); do
+            LOGS="$(docker logs homeassistant-${{ matrix.ha_tag }} 2>&1 || true)"
+
+            if echo "$LOGS" | grep -q "Home Assistant initialized"; then
+              echo "Home Assistant (${{ matrix.ha_tag }}) started successfully"
+              exit 0
+            fi
+
+            if echo "$LOGS" | grep -Eiq "Traceback|Error while setting up|Failed to initialize|Setup failed for custom integration"; then
+              echo "Detected startup error in ${{ matrix.ha_tag }}"
+              echo "$LOGS"
+              exit 1
+            fi
+
+            sleep 5
+          done
+
+          echo "Timed out waiting for Home Assistant startup (${{ matrix.ha_tag }})"
+          docker logs homeassistant-${{ matrix.ha_tag }}
+          exit 1
+
+      - name: Verify HTTP endpoint responds
+        run: |
+          curl -fsS http://127.0.0.1:8123/ >/dev/null
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker logs homeassistant-${{ matrix.ha_tag }}
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f homeassistant-${{ matrix.ha_tag }} || true
