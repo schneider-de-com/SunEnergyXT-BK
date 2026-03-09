@@ -10,6 +10,7 @@ from custom_components.sunEnergyXT.const import DOMAIN
 
 pytestmark = pytest.mark.asyncio
 
+
 async def test_setup_entry(hass):
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -37,14 +38,6 @@ async def test_setup_entry(hass):
         patch(
             "custom_components.sunEnergyXT.coordinator.SunEnergyXTCoordinator.async_config_entry_first_refresh",
             new=AsyncMock(),
-        ),
-        patch(
-            "homeassistant.components.zeroconf.async_setup",
-            return_value=True,
-        ),
-        patch(
-            "homeassistant.components.dhcp.async_setup",
-            return_value=True,
         ),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)

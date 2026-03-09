@@ -6,8 +6,13 @@
     "@schneider-de-com"
   ],
   "config_flow": true,
-  "dependencies": ["network"],
-  "after_dependencies": ["dhcp", "zeroconf"],
+  "dependencies": [
+    "network"
+  ],
+  "after_dependencies": [
+    "dhcp",
+    "zeroconf"
+  ],
   "documentation": "https://github.com/SunEnergyXT/SunEnergyXT-BK/",
   "integration_type": "device",
   "iot_class": "local_polling",

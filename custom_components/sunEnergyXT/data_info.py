@@ -133,6 +133,7 @@ class DiagnosticInfo:
     reporttime: str = ""
     networkrssi: str = ""
 
+
 @dataclass
 class MdnsDeiveInfo:
     """mDNS device discovery info."""
