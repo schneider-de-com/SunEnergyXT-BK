@@ -1,20 +1,20 @@
+from __future__ import annotations
+
 import asyncio
+import json
 import logging
+import re
 import time
-from datetime import datetime
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from .const import *
-from .data_info import *
-import queue
 
 _LOGGER = logging.getLogger(__name__)
 
+_MALFORMED_KEY_PATTERN = re.compile(r'""([A-Za-z0-9_ ]+)":')
+
 
 class TcpClient:
-    """tcp客户端连接处理类."""
+    """Low-level TCP client for SunEnergyXT."""
 
     def __init__(self, hass, entry) -> None:
-        """tcp初始化函数."""
         self.hass = hass
         self.host = entry.data["host"]
         self.port = entry.data["port"]
@@ -22,347 +22,151 @@ class TcpClient:
         self.serial_number = entry.data["serial_number"]
         self.reader = None
         self.writer = None
-        self.listen_data_task = None
-        self.check_connect_task = None
         self.connected = False
-        self.checked = False
-        self.delay = 5
-        self.data = queue.Queue()  # 存储从服务器接收的数据
-        self.last_time = datetime.now()
+        self._buffer = ""
 
-    async def async_connect(self):
-        """建立TCP连接并启动数据监听任务."""
-        try:
-            # 如果已有连接，先断开
-            await self.async_disconnect()
+    async def async_connect(self) -> None:
+        await self.async_disconnect()
+        self.reader, self.writer = await asyncio.wait_for(
+            asyncio.open_connection(self.host, self.port),
+            timeout=3.0,
+        )
+        self.connected = True
+        _LOGGER.info("Connected to %s:%s", self.host, self.port)
 
-            # 启动连接检查任务
-            self.checked = True
-
-            # 失败后尝试连接不需要重复开启监听
-            if self.check_connect_task is None:
-                self.check_connect_task = asyncio.create_task(
-                    self.async_check_connect(), name="tcp_check_connect_task"
-                )
-
-            # 建立TCP连接,需要超时机制
-            # self.reader, self.writer = await asyncio.open_connection(
-            #     self.host, self.port
-            # )
-
-            self.reader, self.writer = await asyncio.wait_for(
-                asyncio.open_connection(self.host, self.port), timeout=2.0
-            )
-
-            self.connected = True
-
-            self.last_time = datetime.now()
-
-            await self.async_update_diagnostics("connected")
-
-            # 启动数据接收任务
-            self.listen_data_task = None
-
-            self.listen_data_task = asyncio.create_task(
-                self.async_listen_data(), name="tcp_listen_data_task"
-            )
-
-            message = f"connect to{self.host}:{self.port}"
-
-            _LOGGER.info(message)
-
-        except Exception as e:
-            message = f"connect to {self.host} {self.port}" + ":  %s", e
-            _LOGGER.error(message)
-            await self.async_disconnect()
-
-    async def async_disconnect(self):
-        """断开TCP连接."""
-
+    async def async_disconnect(self) -> None:
         self.connected = False
-
-        await self.async_update_diagnostics("connected")
-
-        # 取消监听任务
-        if self.listen_data_task is not None and not self.listen_data_task.done():
-            try:
-                self.listen_data_task.cancel()
-
-                await asyncio.wait_for(self.listen_data_task, timeout=self.delay)
-            except (asyncio.CancelledError, TimeoutError):
-                pass  # 需要捕获取消错误,无法转化为异常
-            except Exception as e:
-                message = "async_disconnect_isten_data_task_error: %s", e
-                _LOGGER.error(message)
-            finally:
-                self.listen_data_task = None
-
-        # 关闭TCP连接
+        self._buffer = ""
         if self.writer is not None:
             try:
                 self.writer.close()
-
-                await asyncio.wait_for(self.writer.wait_closed(), timeout=self.delay)
-            except (TimeoutError, Exception) as e:
-                message = "async_disconnect_writer_error: %s", e
-                _LOGGER.error(message)
-            finally:
-                self.writer = None
-                self.reader = None
-
-    async def async_send_data(self, data: str) -> bool:
-        """TCP发送数据函数."""
-
-        if not self.connected or not self.writer:
-            message = "not connected, cannot send data"
-            _LOGGER.error(message)
-            return False
-
-        try:
-            ascii_bytes = data.encode("ascii", errors="ignore")
-
-            message = f"{self.serial_number} send_data:{ascii_bytes}"
-
-            _LOGGER.info(message)
-
-            self.writer.write(ascii_bytes)
-
-            await self.writer.drain()
-        except Exception as e:
-            message = "async_send_data_error: %s", e
-            _LOGGER.error(message)
-            await self.async_reconnect()
-            return False
-
-        return True
-
-    async def async_set_data(
-        self, data_type: str, data_value: int, set_data: str
-    ) -> bool:
-        """TCP数据设置函数."""
-
-        # 清除原先存储的数据
-        self.data.queue.clear()
-
-        result = await self.async_send_data(set_data)
-
-        if not result:
-            return False
-
-        timeout = 2
-
-        start_time = time.monotonic()
-
-        while True:
-            if time.monotonic() - start_time > timeout:
-                break
-
-            try:
-                while not self.data.empty():
-                    respond_info = self.data.get()
-
-                    respond_code = getattr(respond_info, "code", None)
-
-                    respond_data = getattr(respond_info, "data", None)
-
-                    if respond_data is not None:
-                        respond_value = getattr(respond_data, data_type, None)
-
-                    if respond_code is not None and respond_value is not None:
-                        # 返回值为0为成功
-                        if respond_code == 0x6057 and respond_value == 0:
-                            return True
-
-            except Exception as e:
-                message = "async_set_data_error: %s", e
-                _LOGGER.error(message)
-
-            await asyncio.sleep(0.1)
-
-        return False
-
-    async def async_listen_data(self):
-        """TCP数据监听函数."""
-
-        # 持续监听来自TCP服务器的数据
-        while self.connected:
-            try:
-                if self.reader is not None:
-                    # 根据你的TCP服务器数据格式进行调整,此处会一直等待接收数据
-                    data = await self.reader.read(2048)
-
-                if not data:
-                    message = f"{self.serial_number} disconnect"
-                    _LOGGER.error(message)
-                    break  # 连接已关闭
-
-                message = f"{self.serial_number} receive_data:{data}"
-
-                _LOGGER.info(message)
-
-                # 解析数据，这里假设服务器发送JSON格式的SOC信息
-                decoded_data = data.decode("ascii", errors="ignore")
-
-                data_lines = decoded_data.splitlines()
-
-                for data_line in data_lines:
-                    if data_line == "":
-                        continue
-
-                    if "xaa" in data_line.lower():
-                        continue
-
-                    if "code" not in data_line.lower():
-                        continue
-
-                    if not data_line.lower().startswith('{"code":'):
-                        continue
-
-                    count_code = data_line.lower().count("code")
-
-                    if count_code != 1:
-                        continue
-
-                    respond_info = await self.async_prase_data(data_line)
-
-                    if respond_info is None:
-                        continue
-
-                    # 设置响应S
-                    if respond_info.code == 0x6057:
-                        self.data.put(respond_info)
-
-                    # 数据上报
-                    if respond_info.code in {0x6052, 0x6055, 0x6060}:
-                        # 更新数据刷新时间
-                        await self.async_update_diagnostics("reporttime")
-                        # 更新网络强度
-                        await self.async_update_diagnostics(
-                            "networkrssi", respond_info.data
-                        )
-                        # 更新实体信息
-                        await self.async_update_entities(respond_info)
-
-                    self.last_time = datetime.now()
-
-            except Exception as e:
-                message = "async_listen_data_error: %s", e
-                _LOGGER.error(message)
-                self.connected = False
-                break
-
-        # 连接断开后尝试重连
-        await self.async_reconnect()
-
-    async def async_check_connect(self):
-        """TCP连接状态检查函数."""
-        while self.checked:
-            try:
-                # 延时
-                await asyncio.sleep(self.delay)
-
-                # 判断超时后重新进行连接
-                current_time = datetime.now()
-
-                time_diff = abs((current_time - self.last_time).total_seconds())
-
-                if time_diff > 60:
-                    await self.async_disconnect()
-                    self.last_time = datetime.now()
-
-                await self.async_update_diagnostics("connected")
-
-                if self.connected:
-                    continue
-
-                await self.async_connect()
-
-            except Exception as e:
-                message = "async_check_connect_error: %s", e
-                _LOGGER.error(message)
-                self.connected = False
-
-    async def async_update_entities(self, data):
-        """传感器实体更新状态函数."""
-        # 通过Home Assistant的事件系统触发实体更新
-        # 只能被通过 async_dispatcher_connect() 注册的特定监听器接收
-        # 当其他地方发送这个信号时，_handle_data_update会被调用
-        async_dispatcher_send(
-            self.hass,
-            f"data_update_{self.entry_id}",
-            data,  # 可选的参数
-        )
-
-    async def async_update_diagnostics(self, flag, respond_data=None):
-        """传感器诊断实体更新函数."""
-
-        if flag == "connected":
-            connect_state = "connected" if self.connected else "disconnected"
-            diagnostics_info = DiagnosticInfo(connection=connect_state)
-
-        if flag == "networkrssi":
-            rssi = getattr(respond_data, "t475", None)
-
-            if (rssi is not None) and (rssi != 0xFFFFFFFF):
-                rssi_data = f"-{rssi} dB"
-            else:
-                rssi_data = ""
-
-            diagnostics_info = DiagnosticInfo(networkrssi=rssi_data)
-
-        if flag == "reporttime":
-            report_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            diagnostics_info = DiagnosticInfo(reporttime=report_time)
-
-        # """通知诊断传感器实体更新状态"""
-        async_dispatcher_send(
-            self.hass,
-            f"diagnostic_update_{self.entry_id}",
-            diagnostics_info,  # 可选的参数
-        )
-
-    async def async_reconnect(self):
-        """TCP断线重连函数."""
-
-        # """实现断线重连逻辑"""
-        self.connected = False
-
-        # 如果不是主动断开，尝试重连
-        if not self.listen_data_task or self.listen_data_task.cancelled():
-            return
-
-        # 延时
-        await asyncio.sleep(self.delay)
-
-        if not self.listen_data_task.cancelled():
-            await self.async_connect()
-
-    async def async_stop_client(self):
-        """TCP客户端停止函数."""
-
-        self.checked = False
-
+                await asyncio.wait_for(self.writer.wait_closed(), timeout=2.0)
+            except Exception as err:
+                _LOGGER.debug("Error closing writer: %s", err)
+        self.reader = None
+        self.writer = None
+
+    async def async_stop_client(self) -> None:
         await self.async_disconnect()
 
-        # 取消状态检查任务
-        if self.check_connect_task is not None and not self.check_connect_task.done():
-            try:
-                self.check_connect_task.cancel()
-
-                await asyncio.wait_for(self.check_connect_task, timeout=self.delay)
-            except (asyncio.CancelledError, TimeoutError):
-                pass  # 需要捕获取消错误,无法转化为异常
-            except Exception as e:
-                message = "async_stop_client_error: %s", e
-                _LOGGER.error(message)
-            finally:
-                self.check_connect_task = None
-
-    async def async_prase_data(self, data) -> RespondInfo | None:
-        """TCP客户端数据解析函数."""
+    async def async_send_json(self, payload: dict) -> bool:
+        if not self.connected or self.writer is None:
+            return False
         try:
-            return RespondInfo.json_to_respond(data)
-        except Exception as e:
-            message = "async_listen_prase_data_error: %s", e
-            _LOGGER.error(message)
+            raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+            _LOGGER.debug("%s send_data:%s", self.serial_number, raw)
+            self.writer.write(raw.encode("ascii", errors="ignore"))
+            await self.writer.drain()
+            return True
+        except Exception as err:
+            _LOGGER.error("async_send_json_error: %s", err)
+            self.connected = False
+            return False
+
+    async def async_set_data(self, data_type: str, data_value: int | float, set_data: str) -> bool:
+        del data_value
+        if not self.connected or self.writer is None:
+            return False
+        try:
+            self.writer.write(set_data.encode("ascii", errors="ignore"))
+            await self.writer.drain()
+        except Exception as err:
+            _LOGGER.error("async_set_data send error: %s", err)
+            self.connected = False
+            return False
+
+        timeout = 2.0
+        start = time.monotonic()
+        while time.monotonic() - start <= timeout:
+            messages = await self.read_messages(timeout=0.25)
+            for msg in messages:
+                code = msg.get("code")
+                data = msg.get("data", {})
+                if not isinstance(data, dict):
+                    continue
+                response_value = data.get(data_type)
+                if code in {0, 0x6057} and response_value == 0:
+                    return True
+            await asyncio.sleep(0.05)
+        return False
+
+    async def read_messages(self, timeout: float = 1.0) -> list[dict]:
+        if not self.connected or self.reader is None:
+            return []
+        end_time = asyncio.get_running_loop().time() + timeout
+        messages: list[dict] = []
+        while asyncio.get_running_loop().time() < end_time:
+            try:
+                chunk = await asyncio.wait_for(self.reader.read(4096), timeout=0.25)
+                if not chunk:
+                    self.connected = False
+                    break
+                decoded = chunk.decode("ascii", errors="ignore")
+                _LOGGER.debug("%s receive_data:%s", self.serial_number, decoded)
+                for raw_message in self._extract_json_messages(decoded):
+                    parsed = self._parse_json_message(raw_message)
+                    if parsed is not None:
+                        messages.append(parsed)
+            except TimeoutError:
+                continue
+            except asyncio.TimeoutError:
+                continue
+            except Exception as err:
+                _LOGGER.error("read_messages_error: %s", err)
+                break
+        return messages
+
+    def _extract_json_messages(self, chunk: str) -> list[str]:
+        self._buffer += chunk
+        messages: list[str] = []
+        start_index = None
+        depth = 0
+        in_string = False
+        escape = False
+        for index, char in enumerate(self._buffer):
+            if start_index is None:
+                if char == "{":
+                    start_index = index
+                    depth = 1
+                    in_string = False
+                    escape = False
+                continue
+            if in_string:
+                if escape:
+                    escape = False
+                elif char == "\\":
+                    escape = True
+                elif char == '"':
+                    in_string = False
+                continue
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    messages.append(self._buffer[start_index : index + 1])
+                    start_index = None
+        if start_index is None:
+            self._buffer = ""
+        else:
+            self._buffer = self._buffer[start_index:]
+            if len(self._buffer) > 8192:
+                self._buffer = self._buffer[-8192:]
+        return messages
+
+    def _parse_json_message(self, raw_message: str) -> dict | None:
+        try:
+            sanitized = _MALFORMED_KEY_PATTERN.sub(r'"\1":', raw_message)
+            payload = json.loads(sanitized)
+            if not isinstance(payload, dict):
+                return None
+            code = payload.get("code")
+            data = payload.get("data", {})
+            if not isinstance(data, dict):
+                data = {}
+            return {"code": code, "data": data}
+        except Exception as err:
+            _LOGGER.debug("Ignoring malformed frame %s: %s", raw_message, err)
             return None
