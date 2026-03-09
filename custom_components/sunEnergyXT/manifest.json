@@ -1,6 +1,10 @@
 {
   "domain": "sunEnergyXT",
   "name": "SunEnergyXT-BK",
+  "after_dependencies": [
+    "dhcp",
+    "zeroconf"
+  ],
   "codeowners": [
     "@SunEnergyXT",
     "@schneider-de-com"
@@ -8,10 +12,6 @@
   "config_flow": true,
   "dependencies": [
     "network"
-  ],
-  "after_dependencies": [
-    "dhcp",
-    "zeroconf"
   ],
   "documentation": "https://github.com/SunEnergyXT/SunEnergyXT-BK/",
   "integration_type": "device",
