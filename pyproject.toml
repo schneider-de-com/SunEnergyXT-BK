@@ -1,14 +1,60 @@
-[tool.ruff]
-target-version = "py313"
-line-length = 88
-exclude = [
-  ".git",
-  ".github",
-  ".venv",
-  "venv",
-  "build",
-  "dist",
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sunenergyxt-bk"
+version = "2026.3.1"
+description = "Home Assistant custom integration for SunEnergyXT BK systems"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+  { name = "Sven Schneider" }
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = [
+  "-ra",
+  "--strict-markers",
+]
+filterwarnings = [
+  "ignore::DeprecationWarning:pkg_resources.*",
+  "ignore::DeprecationWarning:google.*",
+]
+pythonpath = [
+  "."
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
 [tool.ruff.lint]
-select = ["E9", "F63", "F7", "F82"]
+select = [
+  "E",
+  "F",
+  "I",
+  "UP",
+  "B",
+]
+ignore = [
+  "E501",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["custom_components*", "tests*"]
