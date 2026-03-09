@@ -1,13 +1,20 @@
 {
   "domain": "sunEnergyXT",
   "name": "SunEnergyXT-BK",
-  "version": "2026.3.1",
-  "documentation": "https://github.com/SunEnergyXT/SunEnergyXT-BK/",
-  "issue_tracker": "https://github.com/SunEnergyXT/SunEnergyXT-BK/issues",
-  "codeowners": ["@SunEnergyXT"],
+  "codeowners": [
+    "@SunEnergyXT",
+    "@schneider-de-com"
+  ],
   "config_flow": true,
+  "dependencies": [
+    "dhcp",
+    "network",
+    "zeroconf"
+  ],
+  "documentation": "https://github.com/SunEnergyXT/SunEnergyXT-BK/",
   "integration_type": "device",
   "iot_class": "local_polling",
-  "dependencies": ["network", "dhcp", "zeroconf"],
-  "requirements": []
+  "issue_tracker": "https://github.com/SunEnergyXT/SunEnergyXT-BK/issues",
+  "requirements": [],
+  "version": "2026.3.1"
 }

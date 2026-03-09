@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .const import DOMAIN
@@ -12,6 +13,8 @@ from .coordinator import SunEnergyXTCoordinator
 from .tcp_client import TcpClient
 
 PLATFORMS = [Platform.SENSOR, Platform.NUMBER, Platform.SWITCH]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 @dataclass
