@@ -59,7 +59,7 @@ Use the device IP address and TCP port from the inverter or battery system.
 
 Typical values:
 
-- **IP address:** `10.6.50.106`
+- **IP address:** `10.1.1.100`
 - **Port:** `8000`
 
 Example manual configuration screen:
@@ -116,10 +116,6 @@ The repository includes:
 - **Hassfest** validation
 - **HACS** validation
 - **Ruff** linting and syntax checks
-
-## Notes
-
-The `documentation`, `issue_tracker` and `codeowners` fields in `manifest.json` use placeholders and should be adjusted after you publish the repository to GitHub.
 
 ## Disclaimer
 
