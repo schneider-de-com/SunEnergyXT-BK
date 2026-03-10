@@ -50,10 +50,9 @@ async def test_no_ev_sensor_entities_without_ev_points():
     coordinator = DummyCoordinator(
         data={
             "t211": 100,
-            "t590": 3600,
             "t592": 100,
         },
-        available_points={"t211", "t590", "t592"},
+        available_points={"t211", "t592"},
     )
 
     entry = DummyEntry(
@@ -75,7 +74,6 @@ async def test_no_ev_sensor_entities_without_ev_points():
     created_points = {entity._point for entity in added_entities}
 
     assert "t211" in created_points
-    assert "t590" in created_points
     assert "t592" in created_points
 
     assert "t701_4" not in created_points  # EV Mode Power
@@ -110,6 +108,5 @@ async def test_no_ev_switch_entities_without_ev_points():
     created_points = {entity._point for entity in added_entities}
 
     assert "t598" in created_points
-
     assert "t701_1" not in created_points  # EV mode switch
     assert "t728" not in created_points    # AC mix in EV mode

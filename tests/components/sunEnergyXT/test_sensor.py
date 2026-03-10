@@ -45,11 +45,10 @@ async def test_sensor_setup_creates_only_available_entities():
     coordinator = DummyCoordinator(
         data={
             "t211": 100,
-            "t590": 3600,
             "t701_4": 1200,
             "t475": 55,
         },
-        available_points={"t211", "t590"},
+        available_points={"t211", "t701_4"},
     )
 
     entry = DummyEntry(
@@ -70,9 +69,7 @@ async def test_sensor_setup_creates_only_available_entities():
     created_points = {entity._point for entity in added_entities}
 
     assert "t211" in created_points
-    assert "t590" in created_points
-
-    assert "t701_4" not in created_points
+    assert "t701_4" in created_points
     assert "t475" not in created_points
 
 
@@ -80,8 +77,8 @@ async def test_sensor_setup_adds_new_entities_when_new_points_become_available()
     coordinator = DummyCoordinator(
         data={
             "t211": 100,
-            "t590": 3600,
             "t701_4": 1200,
+            "t475": 55,
         },
         available_points={"t211"},
     )
@@ -104,14 +101,13 @@ async def test_sensor_setup_adds_new_entities_when_new_points_become_available()
     created_points = {entity._point for entity in added_entities}
     assert created_points == {"t211"}
 
-    coordinator.available_points.update({"t590", "t701_4"})
+    coordinator.available_points.update({"t701_4"})
 
     for listener in coordinator._listeners:
         listener()
 
     created_points = {entity._point for entity in added_entities}
     assert "t211" in created_points
-    assert "t590" in created_points
     assert "t701_4" in created_points
 
 
