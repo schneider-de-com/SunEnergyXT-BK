@@ -1,20 +1,17 @@
-import logging
-from typing import Any
-import voluptuous as vol
-from homeassistant import config_entries
-import homeassistant.helpers.config_validation as cv
-from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.components import zeroconf
-from zeroconf import ServiceListener, ServiceStateChange
-from zeroconf.asyncio import AsyncServiceInfo
-from zeroconf.asyncio import AsyncServiceBrowser
+from __future__ import annotations
+
 import asyncio
-from homeassistant.helpers.dispatcher import async_dispatcher_send
-from .const import *
+import logging
+
+from homeassistant.components import zeroconf
+from homeassistant.core import HomeAssistant
+from zeroconf import ServiceListener
+from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
+
+from .const import DOMAIN
 from .data_info import MdnsDeiveInfo
 from .global_config import GLOBAL_DEVICES
-from .util import *
+from .util import get_device_info_form_device
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -178,8 +175,9 @@ class MdnsManager:
             _LOGGER.error(message)
 
     async def async_handle_judge_change(self, entry_info, device_info) -> bool:
-        """mdns判断配置是否更新函数."""
-        return any(entry_info.get(key) != device_info.get(key) for key in entry_info)
+        """Compare only discovery-managed fields."""
+        compare_keys = ("serial_number", "host", "port", "sw_version", "hw_version")
+        return any(entry_info.get(key) != device_info.get(key) for key in compare_keys)
 
     async def async_update_devices(self, device_info: MdnsDeiveInfo):
         """mdns配置更新函数."""
@@ -210,7 +208,7 @@ class MdnsManager:
         self.hass.config_entries.async_update_entry(
             current_entry,
             data=updated_data,
-            title=device_data.get("device_name", current_entry.title),
+            title=current_entry.title,
         )
 
         self.hass.async_create_task(

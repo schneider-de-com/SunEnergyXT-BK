@@ -1,11 +1,23 @@
+from __future__ import annotations
+
+import asyncio
 from typing import Any
+
 from homeassistant import config_entries
 from homeassistant.core import callback
+
 from .const import DOMAIN
-from .tcp_client import *
-from .discovery import *
-from .global_config import *
-from .util import *  # type: ignore
+from .discovery import MdnsManager
+from .global_config import GLOBAL_DEVICES, GLOBAL_MDNS_CLIENTS
+from .util import (
+    get_config_schema,
+    get_device_info_form_serial_number,
+    get_discover_schema,
+    get_error_message,
+    get_manual_schema,
+    get_manual_select_schema,
+    validate_connection,
+)
 
 
 class BkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -38,6 +50,7 @@ class BkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_get_devices(self) -> dict[str, Any]:
         """处理搜索到的设备,排查已添加的."""
+        GLOBAL_DEVICES.clear()
         await self.async_mdns_start()
 
         await asyncio.sleep(2)
@@ -69,6 +82,7 @@ class BkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
 
                 device_info = get_device_info_form_serial_number(unique_id)
+                device_info["device_name"] = user_input["device_name"]
 
                 return self.async_create_entry(
                     title=user_input["device_name"], data=device_info
@@ -125,7 +139,7 @@ class BkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 port = user_input["port"]
 
-                validate_connection(host, port)
+                await self.hass.async_add_executor_job(validate_connection, host, port)
 
                 # 检查该设备是否已被配置
                 unique_id = user_input["serial_number"]
@@ -191,7 +205,7 @@ class BkOptionsFlow(config_entries.OptionsFlow):
 
                 port = user_input["port"]
 
-                validate_connection(host, port)
+                await self.hass.async_add_executor_job(validate_connection, host, port)
 
                 self.hass.config_entries.async_update_entry(
                     self.entry,
@@ -204,9 +218,7 @@ class BkOptionsFlow(config_entries.OptionsFlow):
                 )
 
                 # 必需步骤 - 完成配置流程
-                return self.async_create_entry(
-                    title=user_input["device_name"], data=updated_data
-                )
+                return self.async_create_entry(title="", data={})
             except Exception as e:
                 message = e.args[0] if e.args else str(e)
                 errors["base"] = get_error_message(message)
