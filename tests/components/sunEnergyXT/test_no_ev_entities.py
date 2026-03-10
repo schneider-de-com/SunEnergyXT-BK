@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from custom_components.sunEnergyXT.sensor import async_setup_entry as async_setup_sensor_entry
-from custom_components.sunEnergyXT.switch import async_setup_entry as async_setup_switch_entry
+from custom_components.sunEnergyXT.sensor import (
+    async_setup_entry as async_setup_sensor_entry,
+)
+from custom_components.sunEnergyXT.switch import (
+    async_setup_entry as async_setup_switch_entry,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -77,8 +81,8 @@ async def test_no_ev_sensor_entities_without_ev_points():
     assert "t592" in created_points
 
     assert "t701_4" not in created_points  # EV Mode Power
-    assert "t711" not in created_points    # AC input power
-    assert "t710" not in created_points    # AC charging energy
+    assert "t711" not in created_points  # AC input power
+    assert "t710" not in created_points  # AC charging energy
 
 
 async def test_no_ev_switch_entities_without_ev_points():
@@ -109,4 +113,4 @@ async def test_no_ev_switch_entities_without_ev_points():
 
     assert "t598" in created_points
     assert "t701_1" not in created_points  # EV mode switch
-    assert "t728" not in created_points    # AC mix in EV mode
+    assert "t728" not in created_points  # AC mix in EV mode

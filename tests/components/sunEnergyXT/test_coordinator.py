@@ -70,8 +70,6 @@ async def test_coordinator_calls_listener_for_new_points(hass):
     client = DummyClient()
     coordinator = SunEnergyXTCoordinator(hass, client)
 
-    listener = AsyncMock()
-
     called = {"count": 0}
 
     def sync_listener() -> None:

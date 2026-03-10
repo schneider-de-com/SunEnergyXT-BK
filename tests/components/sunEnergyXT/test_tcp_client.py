@@ -28,10 +28,7 @@ async def test_extract_json_messages_handles_multiple_frames(hass):
     entry = _create_entry()
     client = TcpClient(hass, entry)
 
-    chunk = (
-        '{"code":24658,"data":{"t211":100}}'
-        '{"code":24661,"data":{"t592":100}}'
-    )
+    chunk = '{"code":24658,"data":{"t211":100}}{"code":24661,"data":{"t592":100}}'
 
     messages = client._extract_json_messages(chunk)
 
@@ -45,10 +42,7 @@ async def test_extract_json_messages_keeps_incomplete_frame_in_buffer(hass):
     entry = _create_entry()
     client = TcpClient(hass, entry)
 
-    chunk = (
-        '{"code":24658,"data":{"t211":100}}'
-        '{"code":24661,"data":{"t592":100}'
-    )
+    chunk = '{"code":24658,"data":{"t211":100}}{"code":24661,"data":{"t592":100}'
 
     messages = client._extract_json_messages(chunk)
 
@@ -61,10 +55,7 @@ async def test_extract_json_messages_completes_buffered_frame_on_next_chunk(hass
     entry = _create_entry()
     client = TcpClient(hass, entry)
 
-    first_chunk = (
-        '{"code":24658,"data":{"t211":100}}'
-        '{"code":24661,"data":{"t592":100}'
-    )
+    first_chunk = '{"code":24658,"data":{"t211":100}}{"code":24661,"data":{"t592":100}'
     second_chunk = "}"
 
     first_messages = client._extract_json_messages(first_chunk)
